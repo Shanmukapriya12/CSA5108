@@ -1,0 +1,76 @@
+#include <stdio.h>
+#include <string.h>
+#include <stdint.h>
+
+#define BLOCK_SIZE 16  // 128-bit block size (for AES)
+
+const uint8_t CONSTANT_128_BIT[BLOCK_SIZE] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+
+// XOR operation on two blocks of data
+void xor_blocks(uint8_t *block1, uint8_t *block2, uint8_t *result) {
+    for (int i = 0; i < BLOCK_SIZE; i++) {
+        result[i] = block1[i] ^ block2[i];
+    }
+}
+
+// Left shift by 1 on a block (with a conditional XOR with the constant)
+void left_shift(uint8_t *block, uint8_t *result, uint8_t *constant) {
+    uint8_t carry = 0;
+    for (int i = BLOCK_SIZE - 1; i >= 0; i--) {
+        result[i] = (block[i] << 1) | carry;
+        carry = (block[i] & 0x80) ? 1 : 0;  // Carry if MSB is 1
+    }
+
+    // If there was a carry, XOR with the constant
+    if (carry) {
+        xor_blocks(result, constant, result);
+    }
+}
+
+// Function to generate the CMAC subkeys (K1 and K2)
+void generate_cmac_subkeys(uint8_t *key, uint8_t *K1, uint8_t *K2) {
+    uint8_t block[BLOCK_SIZE] = {0};  // All zero block (the initial block)
+    uint8_t encrypted_block[BLOCK_SIZE];  // Encrypted result of the block
+    uint8_t constant_128_bit[BLOCK_SIZE] = {0x87};  // Constant for 128-bit blocks
+    uint8_t K1_temp[BLOCK_SIZE], K2_temp[BLOCK_SIZE];
+
+    // Encrypt the all-zero block with the block cipher (simulated here)
+    // Here, you would apply your actual block cipher function (like AES) to the block.
+    // For this example, assume it's a simple block cipher (XOR the block with the key).
+    xor_blocks(block, key, encrypted_block);
+
+    // Generate K1 (left shift the encrypted block)
+    left_shift(encrypted_block, K1_temp, constant_128_bit);
+
+    // Generate K2 (left shift K1)
+    left_shift(K1_temp, K2_temp, constant_128_bit);
+
+    // Copy the results to K1 and K2
+    memcpy(K1, K1_temp, BLOCK_SIZE);
+    memcpy(K2, K2_temp, BLOCK_SIZE);
+}
+
+// Function to print the block
+void print_block(uint8_t *block) {
+    for (int i = 0; i < BLOCK_SIZE; i++) {
+        printf("%02X", block[i]);
+    }
+    printf("\n");
+}
+
+int main() {
+    uint8_t key[BLOCK_SIZE] = {0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF, 0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF};  // Example key (128 bits)
+    uint8_t K1[BLOCK_SIZE], K2[BLOCK_SIZE];
+
+    // Generate the subkeys K1 and K2
+    generate_cmac_subkeys(key, K1, K2);
+
+    // Print the generated subkeys
+    printf("Subkey K1: ");
+    print_block(K1);
+
+    printf("Subkey K2: ");
+    print_block(K2);
+
+    return 0;
+}
