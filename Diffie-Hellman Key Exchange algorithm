@@ -1,0 +1,41 @@
+#include <stdio.h>
+#include <math.h>
+
+// Compute (base^exp) % mod
+long long mod_pow(long long base, long long exp, long long mod) {
+    long long result = 1;
+    base %= mod;
+    while (exp > 0) {
+        if (exp % 2 == 1)
+            result = (result * base) % mod;
+        base = (base * base) % mod;
+        exp /= 2;
+    }
+    return result;
+}
+
+int main() {
+    long long P = 23;  // A prime number (modulus)
+    long long G = 5;   // A primitive root modulo P (base)
+
+    long long a = 6;   // Alice's private key
+    long long b = 15;  // Bob's private key
+
+    // Alice sends A = G^a mod P
+    long long A = mod_pow(G, a, P);
+
+    // Bob sends B = G^b mod P
+    long long B = mod_pow(G, b, P);
+
+    // Both compute shared secret
+    long long secretA = mod_pow(B, a, P);  // Alice computes
+    long long secretB = mod_pow(A, b, P);  // Bob computes
+
+    printf("Public Parameters: P = %lld, G = %lld\n", P, G);
+    printf("Alice sends: %lld\n", A);
+    printf("Bob sends: %lld\n", B);
+    printf("Shared secret (Alice): %lld\n", secretA);
+    printf("Shared secret (Bob):   %lld\n", secretB);
+
+    return 0;
+}
