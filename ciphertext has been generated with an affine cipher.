@@ -1,0 +1,59 @@
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
+
+// Function to compute modular inverse of a number modulo m
+int mod_inverse(int a, int m) {
+    for (int x = 1; x < m; x++) {
+        if ((a * x) % m == 1) {
+            return x;
+        }
+    }
+    return -1;
+}
+
+// Affine cipher decryption function
+char affine_decrypt_char(char c, int a, int b, int m) {
+    if (isalpha(c)) {
+        char base = isupper(c) ? 'A' : 'a';
+        return (char)(((a * (c - base) + b) % m + m) % m + base);
+    }
+    return c;
+}
+
+// Function to break the Affine cipher given the most frequent letters in ciphertext
+void break_affine_cipher(char *ciphertext, char most_frequent, char second_most_frequent) {
+    int m = 26; // Size of the alphabet
+    int C1 = toupper(most_frequent) - 'A'; // Most frequent letter in ciphertext (B -> E assumption)
+    int C2 = toupper(second_most_frequent) - 'A'; // Second most frequent letter (U -> T assumption)
+
+    int P1 = 'E' - 'A'; // Assuming most frequent maps to 'E'
+    int P2 = 'T' - 'A'; // Assuming second most frequent maps to 'T'
+
+    // Step 1: Find 'a' using the equation (a * P1 + b) = C1 and (a * P2 + b) = C2
+    int a = (C2 - C1 + m) * mod_inverse(P2 - P1, m) % m;
+    int b = (C1 - a * P1) % m;
+
+    printf("Detected a = %d, b = %d\n", a, b);
+
+    // Step 2: Decrypt the ciphertext using the found 'a' and 'b'
+    int len = strlen(ciphertext);
+    for (int i = 0; i < len; i++) {
+        printf("%c", affine_decrypt_char(ciphertext[i], a, b, m));
+    }
+    printf("\n");
+}
+
+int main() {
+    char ciphertext[] = "BUDBBJZAY"; // Example ciphertext that uses an affine cipher
+    
+    // Frequency Analysis assumption:
+    // Most frequent letter is B, second most frequent is U.
+    printf("Ciphertext: %s\n", ciphertext);
+    printf("Breaking affine cipher...\n");
+
+    // Attempt to break the cipher
+    break_affine_cipher(ciphertext, 'B', 'U');
+
+    return 0;
+}
