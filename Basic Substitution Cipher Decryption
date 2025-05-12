@@ -1,0 +1,46 @@
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
+
+#define MAX_CIPHERTEXT_LENGTH 1024
+
+// Function to perform substitution decryption
+void decrypt_substitution(char *ciphertext, char *key, char *plaintext) {
+    int i;
+    int len = strlen(ciphertext);
+    for (i = 0; i < len; i++) {
+        char ch = ciphertext[i];
+        
+        if (ch == ' ') {
+            plaintext[i] = ' ';  // Preserve spaces
+        } else {
+            // Substitution: find corresponding letter in the key
+            int index = ch - '0';  // Convert character to index in the key (assuming simple direct map)
+            if (index >= 0 && index < 26) {
+                plaintext[i] = key[index];
+            } else {
+                plaintext[i] = ch;  // If it's a special character, just leave it as is
+            }
+        }
+    }
+    plaintext[len] = '\0';  // Null terminate the plaintext
+}
+
+int main() {
+    // Sample ciphertext (the one you provided)
+    char ciphertext[] = "53‡‡†305))6*;4826)4‡.)4‡);806*;48†8¶60))85;;]8*;:‡*8†83(88)5*†;46(;88*96*?;8)*‡(;485);5*†2:*‡(;4956*2(5*—4)8¶8*;4069285);)6†8)4‡‡;1(‡9;48081;8:8‡1;48†85;4)485†528806*81 (‡9;48;(88;4(‡?34;48)4‡;161;:188;‡?;";
+    
+    // Sample key (for substitution, mapping symbols to letters - this can be adjusted)
+    // A simple example: just map numbers 0-9 to letters
+    char key[] = "ETAOINSRHDLUCMFYPWBVKGJQXZ";  // This is an arbitrary substitution key
+    
+    // Output plaintext buffer
+    char plaintext[MAX_CIPHERTEXT_LENGTH];
+
+    // Decrypt the ciphertext using the substitution key
+    decrypt_substitution(ciphertext, key, plaintext);
+
+    printf("Decrypted plaintext: %s\n", plaintext);
+
+    return 0;
+}
