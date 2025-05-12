@@ -1,0 +1,93 @@
+#include <stdio.h>
+#include <string.h>
+#include <stdint.h>
+
+#define BLOCK_SIZE 8  // 8-byte block size
+
+// XOR two blocks (for CBC MAC)
+void xor_blocks(uint8_t *block1, uint8_t *block2, uint8_t *result) {
+    for (int i = 0; i < BLOCK_SIZE; i++) {
+        result[i] = block1[i] ^ block2[i];
+    }
+}
+
+// Simple XOR-based "block cipher" (you can replace it with a real cipher like AES)
+void block_cipher(uint8_t *input, uint8_t *key, uint8_t *output) {
+    for (int i = 0; i < BLOCK_SIZE; i++) {
+        output[i] = input[i] ^ key[i];  // XOR-based "encryption"
+    }
+}
+
+// CBC MAC function
+void cbc_mac(uint8_t *message, uint8_t *key, uint8_t *mac) {
+    uint8_t block[BLOCK_SIZE] = {0};  // Initial block for CBC
+    uint8_t encrypted_block[BLOCK_SIZE];
+
+    // Process the message in blocks
+    for (int i = 0; i < strlen((char *)message); i += BLOCK_SIZE) {
+        uint8_t current_block[BLOCK_SIZE] = {0};
+        memcpy(current_block, &message[i], BLOCK_SIZE);
+        
+        // XOR with the previous block (or initial block for first block)
+        xor_blocks(current_block, block, block);
+        
+        // Encrypt the block with the block cipher
+        block_cipher(block, key, encrypted_block);
+        memcpy(block, encrypted_block, BLOCK_SIZE);
+    }
+
+    // Final MAC is in 'block' after processing all blocks
+    memcpy(mac, block, BLOCK_SIZE);
+}
+
+// Function to print a block (for debugging)
+void print_block(uint8_t *block) {
+    for (int i = 0; i < BLOCK_SIZE; i++) {
+        printf("%02X", block[i]);
+    }
+    printf("\n");
+}
+
+int main() {
+    uint8_t message[] = "MessageX";  // Example message (one block)
+    uint8_t key[BLOCK_SIZE] = {0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF};  // Example key
+    uint8_t mac[BLOCK_SIZE];  // MAC of the message
+    uint8_t adversary_message[BLOCK_SIZE * 2];  // X || (X ⊕ T)
+
+    // Calculate the CBC MAC of the message
+    cbc_mac(message, key, mac);
+
+    printf("Original Message (X): ");
+    print_block(message);
+
+    printf("CBC MAC (T) of X: ");
+    print_block(mac);
+
+    // Construct the adversary's message X || (X ⊕ T)
+    uint8_t xor_result[BLOCK_SIZE];
+    xor_blocks(message, mac, xor_result);
+
+    // Concatenate message X and the result X ⊕ T
+    memcpy(adversary_message, message, BLOCK_SIZE);
+    memcpy(adversary_message + BLOCK_SIZE, xor_result, BLOCK_SIZE);
+
+    // Calculate the CBC MAC of the adversary's message
+    uint8_t adversary_mac[BLOCK_SIZE];
+    cbc_mac(adversary_message, key, adversary_mac);
+
+    printf("\nAdversary's Message (X || (X ⊕ T)): ");
+    print_block(adversary_message);
+
+    printf("CBC MAC of the adversary's message: ");
+    print_block(adversary_mac);
+
+    // Since the adversary's message is X || (X ⊕ T), the CBC MAC should be the same as T
+    printf("\nIs the CBC MAC of the adversary's message the same as the original MAC (T)? ");
+    if (memcmp(mac, adversary_mac, BLOCK_SIZE) == 0) {
+        printf("Yes, the MACs are identical!\n");
+    } else {
+        printf("No, the MACs are different.\n");
+    }
+
+    return 0;
+}
