@@ -1,0 +1,60 @@
+#include <stdio.h>
+#include <string.h>
+
+// ECB mode encryption simulation (simple XOR for illustration)
+void ecb_encrypt(char *plaintext, char *key, char *ciphertext) {
+    for (int i = 0; i < strlen(plaintext); i++) {
+        ciphertext[i] = plaintext[i] ^ key[i % strlen(key)];
+    }
+}
+
+// CBC mode encryption simulation (simple XOR for illustration)
+void cbc_encrypt(char *plaintext, char *key, char *iv, char *ciphertext) {
+    char previous_block[2];  // 2-byte block for simplicity
+    strncpy(previous_block, iv, 2); // Initialization Vector (IV)
+    
+    for (int i = 0; i < strlen(plaintext); i++) {
+        ciphertext[i] = plaintext[i] ^ previous_block[i % 2] ^ key[i % strlen(key)];
+        previous_block[i % 2] = ciphertext[i]; // Update previous block
+    }
+}
+
+// Function to simulate decryption (for both ECB and CBC)
+void decrypt(char *ciphertext, char *key, char *iv, char *plaintext, int is_cbc) {
+    if (is_cbc) {
+        char previous_block[2];
+        strncpy(previous_block, iv, 2);  // Initialization Vector (IV)
+        for (int i = 0; i < strlen(ciphertext); i++) {
+            plaintext[i] = ciphertext[i] ^ previous_block[i % 2] ^ key[i % strlen(key)];
+            previous_block[i % 2] = ciphertext[i]; // Update previous block
+        }
+    } else {
+        for (int i = 0; i < strlen(ciphertext); i++) {
+            plaintext[i] = ciphertext[i] ^ key[i % strlen(key)];
+        }
+    }
+}
+
+int main() {
+    char plaintext[] = "HELLO WORLD";
+    char key[] = "KEY";
+    char iv[] = "IV";  // Initialization Vector for CBC
+    char ciphertext[20];
+    char decrypted_text[20];
+
+    // ECB Encryption
+    printf("Original Plaintext (ECB): %s\n", plaintext);
+    ecb_encrypt(plaintext, key, ciphertext);
+    printf("Ciphertext (ECB): %s\n", ciphertext);
+    decrypt(ciphertext, key, iv, decrypted_text, 0);
+    printf("Decrypted Text (ECB): %s\n", decrypted_text);
+
+    // CBC Encryption
+    printf("\nOriginal Plaintext (CBC): %s\n", plaintext);
+    cbc_encrypt(plaintext, key, iv, ciphertext);
+    printf("Ciphertext (CBC): %s\n", ciphertext);
+    decrypt(ciphertext, key, iv, decrypted_text, 1);
+    printf("Decrypted Text (CBC): %s\n", decrypted_text);
+
+    return 0;
+}
