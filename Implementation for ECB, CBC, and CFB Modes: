@@ -1,0 +1,143 @@
+#include <stdio.h>
+#include <string.h>
+
+#define BLOCK_SIZE 8  // 8 bytes = 64 bits for this example
+
+// Function to apply padding to the plaintext (appends 1 bit and then 0 bits)
+void apply_padding(char *data, int *length) {
+    int data_len = *length;
+    int padding_len = BLOCK_SIZE - (data_len % BLOCK_SIZE);
+    
+    for (int i = data_len; i < data_len + padding_len - 1; i++) {
+        data[i] = '0';  // Adding 0 bits for padding
+    }
+
+    // Add a 1 bit followed by 0s for padding
+    data[data_len + padding_len - 1] = '1';
+    *length = data_len + padding_len;
+}
+
+// XOR-based simple block encryption/decryption (for demonstration)
+void xor_block(char *block, char *key) {
+    for (int i = 0; i < BLOCK_SIZE; i++) {
+        block[i] = block[i] ^ key[i % BLOCK_SIZE];
+    }
+}
+
+// ECB Mode - Encrypts each block independently
+void ecb_encrypt(char *plaintext, char *key, char *ciphertext, int length) {
+    for (int i = 0; i < length; i += BLOCK_SIZE) {
+        xor_block(plaintext + i, key);
+        memcpy(ciphertext + i, plaintext + i, BLOCK_SIZE);
+    }
+}
+
+// ECB Mode - Decrypts each block independently
+void ecb_decrypt(char *ciphertext, char *key, char *plaintext, int length) {
+    for (int i = 0; i < length; i += BLOCK_SIZE) {
+        xor_block(ciphertext + i, key);
+        memcpy(plaintext + i, ciphertext + i, BLOCK_SIZE);
+    }
+}
+
+// CBC Mode - Encrypts each block using previous ciphertext block
+void cbc_encrypt(char *plaintext, char *key, char *iv, char *ciphertext, int length) {
+    char previous_block[BLOCK_SIZE];
+    memcpy(previous_block, iv, BLOCK_SIZE);
+
+    for (int i = 0; i < length; i += BLOCK_SIZE) {
+        for (int j = 0; j < BLOCK_SIZE; j++) {
+            plaintext[i + j] ^= previous_block[j];  // XOR with previous block
+        }
+        xor_block(plaintext + i, key);
+        memcpy(ciphertext + i, plaintext + i, BLOCK_SIZE);
+        memcpy(previous_block, ciphertext + i, BLOCK_SIZE);
+    }
+}
+
+// CBC Mode - Decrypts each block using previous ciphertext block
+void cbc_decrypt(char *ciphertext, char *key, char *iv, char *plaintext, int length) {
+    char previous_block[BLOCK_SIZE];
+    memcpy(previous_block, iv, BLOCK_SIZE);
+
+    for (int i = 0; i < length; i += BLOCK_SIZE) {
+        char current_block[BLOCK_SIZE];
+        memcpy(current_block, ciphertext + i, BLOCK_SIZE);
+
+        xor_block(current_block, key);
+        for (int j = 0; j < BLOCK_SIZE; j++) {
+            plaintext[i + j] = current_block[j] ^ previous_block[j];  // XOR with previous block
+        }
+        memcpy(previous_block, ciphertext + i, BLOCK_SIZE);
+    }
+}
+
+// CFB Mode - Encrypts using the previous ciphertext block and a shift register
+void cfb_encrypt(char *plaintext, char *key, char *iv, char *ciphertext, int length) {
+    char shift_register[BLOCK_SIZE];
+    memcpy(shift_register, iv, BLOCK_SIZE);
+
+    for (int i = 0; i < length; i++) {
+        xor_block(shift_register, key);
+        ciphertext[i] = plaintext[i] ^ shift_register[0];
+        
+        // Shift register
+        for (int j = 1; j < BLOCK_SIZE; j++) {
+            shift_register[j - 1] = shift_register[j];
+        }
+        shift_register[BLOCK_SIZE - 1] = ciphertext[i];  // Insert ciphertext byte
+    }
+}
+
+// CFB Mode - Decrypts by applying the same process as encryption
+void cfb_decrypt(char *ciphertext, char *key, char *iv, char *plaintext, int length) {
+    char shift_register[BLOCK_SIZE];
+    memcpy(shift_register, iv, BLOCK_SIZE);
+
+    for (int i = 0; i < length; i++) {
+        xor_block(shift_register, key);
+        plaintext[i] = ciphertext[i] ^ shift_register[0];
+        
+        // Shift register
+        for (int j = 1; j < BLOCK_SIZE; j++) {
+            shift_register[j - 1] = shift_register[j];
+        }
+        shift_register[BLOCK_SIZE - 1] = ciphertext[i];  // Insert ciphertext byte
+    }
+}
+
+int main() {
+    char plaintext[] = "HELLO WORLD";
+    char key[BLOCK_SIZE] = "SECRET1";  // Simple key for demonstration
+    char iv[BLOCK_SIZE] = "INITVECT";  // Initialization vector for CBC and CFB modes
+    char ciphertext[100];
+    char decrypted_text[100];
+    int length = strlen(plaintext);
+
+    // Apply padding if necessary
+    apply_padding(plaintext, &length);
+    printf("Padded plaintext: %s\n", plaintext);
+
+    // ECB Encryption and Decryption
+    printf("\nECB Mode:\n");
+    ecb_encrypt(plaintext, key, ciphertext, length);
+    printf("Ciphertext (ECB): %s\n", ciphertext);
+    ecb_decrypt(ciphertext, key, decrypted_text, length);
+    printf("Decrypted Text (ECB): %s\n", decrypted_text);
+
+    // CBC Encryption and Decryption
+    printf("\nCBC Mode:\n");
+    cbc_encrypt(plaintext, key, iv, ciphertext, length);
+    printf("Ciphertext (CBC): %s\n", ciphertext);
+    cbc_decrypt(ciphertext, key, iv, decrypted_text, length);
+    printf("Decrypted Text (CBC): %s\n", decrypted_text);
+
+    // CFB Encryption and Decryption
+    printf("\nCFB Mode:\n");
+    cfb_encrypt(plaintext, key, iv, ciphertext, length);
+    printf("Ciphertext (CFB): %s\n", ciphertext);
+    cfb_decrypt(ciphertext, key, iv, decrypted_text, length);
+    printf("Decrypted Text (CFB): %s\n", decrypted_text);
+
+    return 0;
+}
